@@ -211,3 +211,4 @@ config.backup
 .mypy_cache/
 .pytype/
 prof/
+/scripts/data/
