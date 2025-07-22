@@ -4,7 +4,7 @@ Peler Panel Flask 主应用
 """
 
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.exceptions import HTTPException
 
 from config import get_config, print_config_info
@@ -72,6 +72,17 @@ def register_blueprints(app):
     # 主页面路由
     @app.route('/')
     def index():
+        """主页面"""
+        return render_template('index.html')
+
+    # 静态文件路由优化
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory('static', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+    # API信息路由（原有的保留作为API信息）
+    @app.route('/api-info')
+    def api_info():
         return jsonify({
             'success': True,
             'message': 'Peler Panel API Server',
@@ -199,6 +210,10 @@ def register_request_handlers(app):
         return response
 
 
+# 创建默认应用实例，供 Flask CLI 使用
+app = create_app()
+
+
 def main():
     """主函数，用于直接运行应用"""
     # 打印配置信息
@@ -226,9 +241,6 @@ def main():
     # 运行应用
     app.run(host=host, port=port, debug=debug)
 
-
-# 创建默认应用实例，供 Flask CLI 使用
-app = create_app()
 
 if __name__ == '__main__':
     main()

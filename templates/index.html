@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Peler Panel - 服务器管理面板{% endblock %}
+
+{% block content %}
+<!-- 搜索和筛选区域 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchInput" 
+                                   placeholder="搜索服务名称或描述...">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 text-end mt-2 mt-md-0">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="viewMode" id="gridView" checked>
+                            <label class="btn btn-outline-primary" for="gridView">
+                                <i class="bi bi-grid-3x3-gap"></i>
+                                网格
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="viewMode" id="listView">
+                            <label class="btn btn-outline-primary" for="listView">
+                                <i class="bi bi-list"></i>
+                                列表
+                            </label>
+                        </div>
+                        
+                        <button class="btn btn-primary ms-2" id="refreshCards">
+                            <i class="bi bi-arrow-clockwise"></i>
+                            刷新
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 服务卡片区域 -->
+<div class="row">
+    <div class="col-12">
+        <!-- 网格视图 -->
+        <div id="cardsGrid" class="row g-3">
+            <!-- 卡片将通过JavaScript动态加载 -->
+        </div>
+        
+        <!-- 列表视图 -->
+        <div id="cardsList" class="d-none">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" width="60">图标</th>
+                                    <th scope="col">名称</th>
+                                    <th scope="col">描述</th>
+                                    <th scope="col">链接</th>
+                                    <th scope="col" width="120">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cardsTableBody">
+                                <!-- 表格行将通过JavaScript动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 空状态显示 -->
+<div id="emptyState" class="text-center py-5 d-none">
+    <div class="mb-4">
+        <i class="bi bi-inbox display-1 text-muted"></i>
+    </div>
+    <h4 class="text-muted">暂无服务</h4>
+    <p class="text-muted mb-4">点击上方"添加服务"按钮开始添加你的第一个服务</p>
+    <button class="btn btn-primary" onclick="showAddCardModal()">
+        <i class="bi bi-plus-circle me-2"></i>
+        添加服务
+    </button>
+</div>
+
+<!-- 搜索无结果状态 -->
+<div id="noSearchResults" class="text-center py-5 d-none">
+    <div class="mb-4">
+        <i class="bi bi-search display-1 text-muted"></i>
+    </div>
+    <h4 class="text-muted">未找到匹配的服务</h4>
+    <p class="text-muted mb-4">尝试使用其他关键词搜索</p>
+    <button class="btn btn-outline-primary" onclick="clearSearch()">
+        <i class="bi bi-x-circle me-2"></i>
+        清除搜索
+    </button>
+</div>
+
+<!-- 认证模态框 -->
+<div class="modal fade" id="authModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    管理员认证
+                </h5>
+            </div>
+            <div class="modal-body">
+                <form id="authForm">
+                    <div class="mb-3">
+                        <label for="adminPassword" class="form-label">管理员密码</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="adminPassword" 
+                                   placeholder="请输入管理员密码" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback" id="passwordError"></div>
+                    </div>
+                    
+                    <!-- 安全信息显示 -->
+                    <div id="securityInfo" class="alert alert-warning d-none">
+                        <small>
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <span id="securityMessage"></span>
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" class="btn btn-primary" form="authForm">
+                    <span class="spinner-border spinner-border-sm d-none me-2" id="authSpinner"></span>
+                    登录
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 卡片编辑模态框 -->
+<div class="modal fade" id="cardModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cardModalTitle">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    添加服务
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cardForm" novalidate>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="cardName" class="form-label">
+                                    服务名称 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="cardName" 
+                                       placeholder="例如：监控面板" required maxlength="50">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="cardUrl" class="form-label">
+                                    访问链接 <span class="text-danger">*</span>
+                                </label>
+                                <input type="url" class="form-control" id="cardUrl" 
+                                       placeholder="https://example.com" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="cardDescription" class="form-label">描述信息</label>
+                                <textarea class="form-control" id="cardDescription" rows="3" 
+                                          placeholder="服务的简要描述..." maxlength="200"></textarea>
+                                <div class="form-text">
+                                    <span id="descriptionCount">0</span>/200 字符
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="cardIcon" class="form-label">
+                                    图标 <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="cardIcon" 
+                                           placeholder="bi-server" required readonly>
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            id="selectIconBtn">选择图标</button>
+                                </div>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            
+                            <!-- 图标预览 -->
+                            <div class="text-center">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <i id="iconPreview" class="bi bi-question-circle display-4 text-muted"></i>
+                                        </div>
+                                        <small class="text-muted">图标预览</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="deleteCardBtn" style="display: none;">
+                    <i class="bi bi-trash me-1"></i>
+                    删除
+                </button>
+                <div class="ms-auto">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary" form="cardForm">
+                        <span class="spinner-border spinner-border-sm d-none me-2" id="cardSpinner"></span>
+                        <span id="cardSubmitText">添加</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图标选择模态框 -->
+<div class="modal fade" id="iconModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-collection me-2"></i>
+                    选择图标
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 图标搜索 -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="iconSearch" 
+                               placeholder="搜索图标...">
+                    </div>
+                </div>
+                
+                <!-- 图标分类标签 -->
+                <div class="mb-3">
+                    <div class="d-flex flex-wrap gap-2" id="iconCategories">
+                        <!-- 分类标签将通过JavaScript动态加载 -->
+                    </div>
+                </div>
+                
+                <!-- 图标网格 -->
+                <div class="icon-grid" id="iconGrid" style="max-height: 400px; overflow-y: auto;">
+                    <!-- 图标将通过JavaScript动态加载 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmIconBtn" disabled>
+                    确认选择
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 确认删除模态框 -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    确认删除
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">确定要删除服务 "<strong id="deleteCardName"></strong>" 吗？</p>
+                <small class="text-muted">此操作无法撤销</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <span class="spinner-border spinner-border-sm d-none me-2" id="deleteSpinner"></span>
+                    确认删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
